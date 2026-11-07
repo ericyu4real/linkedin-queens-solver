@@ -1,10 +1,16 @@
 /**
- * LinkedIn Queens DOM integration.
- * Selectors are based on the live game inspected on 2026-11-07:
- *   #queens-game-board
- *   [data-testid="interactive-grid"]
+ * Queens DOM integration for LinkedIn Queens and Queens Ultimate.
+ *
+ * LinkedIn (inspected 2026-11-07):
+ *   #queens-game-board [data-testid="interactive-grid"]
  *   [data-cell-idx] / [data-testid^="cell-"]
  *   aria-label: "Empty cell|Cross|Queen of color {name}, row {r}, column {c}"
+ *   clicks: React MAIN-world onClick(idx), empty → cross → queen
+ *
+ * Queens Ultimate (inspected 2026-11-07 on queensultimate.com/unlimited):
+ *   .board-grid .cell[data-row][data-col][data-region]
+ *   aria-label: "Row {r}, column {c}, {color} region, empty|marked with X|queen placed"
+ *   native element.click() cycles empty → X → queen
  */
 
 import { isValidSolution, solve } from './solver.js';
@@ -12,35 +18,86 @@ import { isValidSolution, solve } from './solver.js';
 export const CELL_LABEL =
   /^(Empty cell|Cross|Queen) of color (.+), row (\d+), column (\d+)$/;
 
+export const ULTIMATE_CELL_LABEL =
+  /^Row (\d+), column (\d+), (.+) region, (empty|marked with X|queen placed)$/i;
+
 const CLICK_TIMEOUT_MS = 1500;
 const POLL_MS = 40;
 const MAX_CLICKS_PER_CELL = 6;
 
 export function parseCellLabel(label) {
   if (!label) return null;
-  const match = label.match(CELL_LABEL);
-  if (!match) return null;
-  const kind = match[1];
-  return {
-    state: kind === 'Queen' ? 'queen' : kind === 'Cross' ? 'cross' : 'empty',
-    color: match[2],
-    row: Number(match[3]) - 1,
-    col: Number(match[4]) - 1,
-  };
+
+  const linkedin = label.match(CELL_LABEL);
+  if (linkedin) {
+    const kind = linkedin[1];
+    return {
+      state: kind === 'Queen' ? 'queen' : kind === 'Cross' ? 'cross' : 'empty',
+      color: linkedin[2],
+      row: Number(linkedin[3]) - 1,
+      col: Number(linkedin[4]) - 1,
+    };
+  }
+
+  const ultimate = label.match(ULTIMATE_CELL_LABEL);
+  if (ultimate) {
+    const status = ultimate[4].toLowerCase();
+    return {
+      state: status.includes('queen') ? 'queen' : status.includes('x') ? 'cross' : 'empty',
+      color: ultimate[3],
+      row: Number(ultimate[1]) - 1,
+      col: Number(ultimate[2]) - 1,
+    };
+  }
+
+  return null;
+}
+
+function parseCellElement(el) {
+  if (!el) return null;
+  const parsed = parseCellLabel(el.getAttribute('aria-label'));
+  const rowAttr = el.getAttribute('data-row');
+  const colAttr = el.getAttribute('data-col');
+  const row = parsed ? parsed.row : rowAttr == null ? NaN : Number(rowAttr);
+  const col = parsed ? parsed.col : colAttr == null ? NaN : Number(colAttr);
+  if (!Number.isInteger(row) || !Number.isInteger(col)) return null;
+
+  const color = el.getAttribute('data-region') ?? parsed?.color;
+  if (color == null || color === '') return null;
+
+  let state = parsed?.state;
+  if (!state) {
+    if (el.classList.contains('queen')) state = 'queen';
+    else if (el.classList.contains('marker')) state = 'cross';
+    else state = 'empty';
+  }
+
+  return { state, color, row, col };
 }
 
 export function getGrid(root = document) {
   return (
     root.querySelector('#queens-game-board [data-testid="interactive-grid"]') ||
-    root.querySelector('[data-testid="interactive-grid"]')
+    root.querySelector('[data-testid="interactive-grid"]') ||
+    root.querySelector('.board-grid')
   );
 }
 
 export function getCellElements(root = document) {
-  const grid = getGrid(root);
-  if (!grid) return [];
-  const cells = [...grid.querySelectorAll('[data-cell-idx], [data-testid^="cell-"]')];
-  return cells.filter((el) => parseCellLabel(el.getAttribute('aria-label')));
+  const linkedinGrid =
+    root.querySelector('#queens-game-board [data-testid="interactive-grid"]') ||
+    root.querySelector('[data-testid="interactive-grid"]');
+  if (linkedinGrid) {
+    return [...linkedinGrid.querySelectorAll('[data-cell-idx], [data-testid^="cell-"]')].filter(
+      (el) => parseCellElement(el),
+    );
+  }
+
+  const ultimateGrid = root.querySelector('.board-grid');
+  const scope = ultimateGrid || root;
+  return [...scope.querySelectorAll('.cell[data-row][data-col], [data-row][data-col][data-region]')].filter(
+    (el) => parseCellElement(el),
+  );
 }
 
 export function readBoard(root = document) {
@@ -54,7 +111,7 @@ export function readBoard(root = document) {
   const elements = Array.from({ length: n }, () => Array(n).fill(null));
 
   for (const el of cells) {
-    const parsed = parseCellLabel(el.getAttribute('aria-label'));
+    const parsed = parseCellElement(el);
     if (!parsed) continue;
     if (parsed.row < 0 || parsed.row >= n || parsed.col < 0 || parsed.col >= n) {
       return null;
@@ -115,12 +172,36 @@ export function looksLikeLinkedInCompletion(root = document) {
   return /see results|copy score|you.?re crushing it/i.test(visibleText);
 }
 
+export function looksLikeCompletion(root = document) {
+  if (looksLikeLinkedInCompletion(root)) return true;
+  const visibleText = [...root.querySelectorAll('h1, h2, h3, button, a, [role="button"], [role="dialog"]')]
+    .filter(isDisplayed)
+    .map((el) => `${el.textContent || ''} ${el.getAttribute('aria-label') || ''}`)
+    .join('\n');
+  return /you crushed|play another/i.test(visibleText);
+}
+
+function visibleButton(root, pattern) {
+  return [...root.querySelectorAll('button')].find((el) => {
+    if (!isDisplayed(el)) return false;
+    return pattern.test((el.textContent || '').replace(/\s+/g, ' ').trim());
+  });
+}
+
+/** Queens Ultimate starts paused until START GAME; skip the tutorial if it is up. */
+export function ensureBoardInteractive(root = document) {
+  const skip = visibleButton(root, /^skip tutorial$/i);
+  if (skip) skip.click();
+  const start = visibleButton(root, /^start game$/i);
+  if (start) start.click();
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function cellState(el) {
-  const parsed = parseCellLabel(el.getAttribute('aria-label'));
+  const parsed = parseCellElement(el);
   return parsed ? parsed.state : null;
 }
 

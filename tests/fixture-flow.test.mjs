@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import { applySolution, isBoardSolved, readBoard } from '../extension/board.js';
 import { solve, isValidSolution } from '../extension/solver.js';
 import { board4, board4FixtureColors, board4Solution } from './boards.mjs';
-import { renderFixtureHtml } from './fixture-html.mjs';
+import { renderFixtureHtml, renderUltimateFixtureHtml } from './fixture-html.mjs';
 
 function namedRegions() {
   return board4.map((row) => row.map((key) => board4FixtureColors[key].name));
@@ -69,6 +69,41 @@ test('fixture flow: wrong queen and X marks are corrected', async () => {
     assert.equal(latest.states[0][board4Solution[0]], 'queen');
     assert.equal(isBoardSolved(latest), true);
     assert.equal(document.getElementById('completion').hidden, false);
+  } finally {
+    unload(dom);
+  }
+});
+
+test('Queens Ultimate fixture: wrong queen and X marks are corrected', async () => {
+  const html = renderUltimateFixtureHtml({
+    regions: board4,
+    colors: board4FixtureColors,
+    preset: [
+      ['queen', 'cross', 'empty', 'empty'],
+      ['empty', 'empty', 'cross', 'empty'],
+      ['empty', 'queen', 'empty', 'empty'],
+      ['cross', 'empty', 'empty', 'empty'],
+    ],
+  });
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously',
+    url: 'https://queensultimate.com/unlimited',
+  });
+  globalThis.window = dom.window;
+  globalThis.document = dom.window.document;
+  try {
+    const board = readBoard();
+    assert.equal(board.n, 4);
+    assert.equal(board.states[0][0], 'queen');
+    const queens = solve(board.regions);
+    const result = await applySolution(readBoard(), queens);
+    assert.equal(result.solved, true);
+    const latest = readBoard();
+    assert.equal(latest.states[0][0], 'empty', 'incorrect queen at 0,0 was cleared');
+    assert.equal(latest.states[0][board4Solution[0]], 'queen');
+    assert.equal(isBoardSolved(latest), true);
+    assert.equal(document.getElementById('completion').hidden, false);
+    assert.equal(document.querySelector('.play-again-btn').textContent, 'Play Another');
   } finally {
     unload(dom);
   }

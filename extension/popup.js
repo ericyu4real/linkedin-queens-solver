@@ -5,6 +5,8 @@ const hint = document.getElementById('hint');
 const TAB_QUERY = {
   url: [
     'https://www.linkedin.com/games/*',
+    'https://queensultimate.com/*',
+    'https://www.queensultimate.com/*',
     'http://127.0.0.1/*',
     'http://localhost/*',
   ],
@@ -21,14 +23,14 @@ function statusMessage(info) {
     return {
       text: 'No Queens board on this page.',
       enabled: false,
-      hintText: 'Open LinkedIn Queens and start the game first.',
+      hintText: 'Open LinkedIn Queens or Queens Ultimate and start the game first.',
     };
   }
   if (info.completed || info.solved) {
     return {
       text: info.n ? `${info.n}×${info.n} Queens board is already solved.` : 'This Queens board is already solved.',
       enabled: false,
-      hintText: 'LinkedIn should show the results screen.',
+      hintText: 'The game should now show the completed puzzle.',
     };
   }
   if (info.hasBoard) {
@@ -48,7 +50,7 @@ function statusMessage(info) {
   return {
     text: 'This is not a Queens game.',
     enabled: false,
-    hintText: 'Go to LinkedIn Queens, then click the extension again.',
+    hintText: 'Go to LinkedIn Queens or Queens Ultimate, then click the extension again.',
   };
 }
 
@@ -112,7 +114,7 @@ button.addEventListener('click', async () => {
       setView({
         text: result.n ? `Filled the ${result.n}×${result.n} board.` : 'Filled the Queens board.',
         enabled: false,
-        hintText: 'LinkedIn should now show the completed game.',
+        hintText: 'The game should now show the completed puzzle.',
       });
       return;
     }

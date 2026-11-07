@@ -65,3 +65,20 @@ export const board4FixtureColors = {
   C: { name: 'Lime Yellow', bg: 'rgb(230, 243, 136)' },
   D: { name: 'Soft Blue', bg: 'rgb(150, 190, 255)' },
 };
+
+/**
+ * Queens Ultimate unlimited 8×8 Easy #4107, read from the live DOM on 2026-11-07.
+ * Region ids are the page's data-region values.
+ */
+export const liveUltimate4107Solution = [4, 6, 1, 5, 7, 3, 0, 2];
+
+export const liveUltimate4107 = [
+  ['2', '2', '2', '3', '6', '6', '6', '1'],
+  ['2', '3', '3', '3', '6', '6', '1', '1'],
+  ['2', '3', '5', '3', '6', '6', '1', '1'],
+  ['2', '5', '5', '5', '7', '4', '4', '0'],
+  ['2', '5', '5', '5', '7', '7', '4', '0'],
+  ['2', '5', '5', '7', '7', '7', '7', '7'],
+  ['2', '2', '5', '5', '7', '7', '7', '7'],
+  ['2', '2', '5', '5', '7', '7', '7', '7'],
+];

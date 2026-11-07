@@ -8,6 +8,8 @@ import {
   board5,
   live920,
   live920Solution,
+  liveUltimate4107,
+  liveUltimate4107Solution,
   unsolvable2,
 } from './boards.mjs';
 
@@ -117,6 +119,14 @@ test('live LinkedIn #920 8x8 board solves and validates', () => {
     yellowCells.some((cell) => queens[cell.r] === cell.c),
     'Lime Yellow is a 3-cell region so the solution must occupy one of its cells',
   );
+});
+
+test('live Queens Ultimate #4107 8x8 board solves and validates', () => {
+  const queens = solve(liveUltimate4107);
+  assert.ok(queens, 'expected a solution for the live Queens Ultimate 8x8');
+  assert.deepEqual(queens, liveUltimate4107Solution);
+  assert.equal(isValidSolution(liveUltimate4107, queens), true);
+  assertIndependentRules(liveUltimate4107, queens);
 });
 
 test('solver returns null for a non-square board', () => {

@@ -1,7 +1,8 @@
 import {
   applySolution,
+  ensureBoardInteractive,
   isBoardSolved,
-  looksLikeLinkedInCompletion,
+  looksLikeCompletion,
   readBoard,
   solveBoard,
 } from './board.js';
@@ -13,7 +14,8 @@ const RESULT = 'queens-solver-result';
 let running = false;
 
 function mark(status) {
-  const grid = document.querySelector('[data-testid="interactive-grid"]');
+  const grid =
+    document.querySelector('[data-testid="interactive-grid"]') || document.querySelector('.board-grid');
   if (grid) grid.setAttribute(RUN_ATTR, status);
 }
 
@@ -26,11 +28,16 @@ function reply(id, payload) {
 }
 
 function isQueensUrl() {
-  return /\/games\/queens(\/|$|\?)/i.test(location.href);
+  const href = location.href;
+  return /\/games\/queens(\/|$|\?)/i.test(href) || /queensultimate\.com/i.test(href);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function getStatus() {
-  if (looksLikeLinkedInCompletion()) {
+  if (looksLikeCompletion()) {
     const board = readBoard();
     return {
       ok: true,
@@ -86,7 +93,15 @@ async function runSolver() {
   mark('running');
 
   try {
+    ensureBoardInteractive();
+    await sleep(250);
+
     const board = readBoard();
+    if (!board) {
+      mark('unsolved');
+      return { ok: false, error: 'need-start' };
+    }
+
     const queens = solveBoard(board);
     if (!queens) {
       mark('unsolved');
@@ -95,7 +110,7 @@ async function runSolver() {
 
     const result = await applySolution(readBoard() || board, queens);
     const latest = readBoard();
-    const solved = !!(latest && isBoardSolved(latest)) || result.solved || looksLikeLinkedInCompletion();
+    const solved = !!(latest && isBoardSolved(latest)) || result.solved || looksLikeCompletion();
     mark(solved ? 'solved' : 'incomplete');
     return { ok: solved, solved, n: board.n };
   } catch (err) {
