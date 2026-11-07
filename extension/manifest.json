@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Queens Auto Solver",
+  "version": "1.0.0",
+  "description": "Reads the LinkedIn Queens board, solves it locally, and places the queens.",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/games/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": ["content.js"],
+      "type": "module",
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "linkedin-queens-solver",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chrome extension that solves LinkedIn Queens locally and places the queens on the board.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/solver.test.mjs tests/board.test.mjs tests/fixture-flow.test.mjs tests/e2e.test.mjs",
+    "test:solver": "node --test tests/solver.test.mjs tests/board.test.mjs tests/fixture-flow.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^27.0.0",
+    "puppeteer": "^24.0.0"
+  }
+}
