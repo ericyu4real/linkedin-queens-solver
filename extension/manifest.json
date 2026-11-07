@@ -1,8 +1,21 @@
 {
   "manifest_version": 3,
   "name": "Queens Auto Solver",
-  "version": "1.0.0",
-  "description": "Reads the LinkedIn Queens board, solves it locally, and places the queens.",
+  "version": "1.1.0",
+  "description": "Detect a LinkedIn Queens board and fill it when you click Autofill.",
+  "action": {
+    "default_title": "Queens Auto Solver",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab"],
+  "host_permissions": [
+    "https://www.linkedin.com/games/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
   "content_scripts": [
     {
       "matches": [
@@ -10,10 +23,19 @@
         "http://127.0.0.1/*",
         "http://localhost/*"
       ],
-      "js": ["content.js"],
+      "js": ["page.js"],
       "type": "module",
       "run_at": "document_idle",
       "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.linkedin.com/games/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ]
 }

@@ -98,17 +98,21 @@ export function isBoardSolved(board) {
   return isValidSolution(board.regions, queens);
 }
 
+function isDisplayed(el) {
+  if (!el || el.hidden) return false;
+  if (el.closest('[hidden]')) return false;
+  return true;
+}
+
 export function looksLikeLinkedInCompletion(root = document) {
   const href = (root.defaultView && root.defaultView.location && root.defaultView.location.href) || '';
   if (/\/games\/queens\/results/i.test(href)) return true;
   if (/END_SOLVED/.test(href)) return true;
-  const text = (root.body && root.body.innerText) || '';
-  if (/see results|copy score/i.test(text)) return true;
-  if (/you.?re crushing it|you solved|great job|puzzle complete|well done/i.test(text)) return true;
-  const seeResults = [...root.querySelectorAll('button, a, [role="button"]')].some((el) =>
-    /see results|copy score/i.test((el.textContent || '') + (el.getAttribute('aria-label') || '')),
-  );
-  return seeResults;
+  const visibleText = [...root.querySelectorAll('h1, h2, button, a, [role="button"]')]
+    .filter(isDisplayed)
+    .map((el) => `${el.textContent || ''} ${el.getAttribute('aria-label') || ''}`)
+    .join('\n');
+  return /see results|copy score|you.?re crushing it/i.test(visibleText);
 }
 
 function sleep(ms) {

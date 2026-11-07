@@ -33,6 +33,7 @@ let server;
 let baseUrl;
 let userDataDir;
 let browser;
+let extensionId;
 let launchError;
 
 function startServer() {
@@ -70,6 +71,11 @@ async function launch() {
     ],
     defaultViewport: { width: 900, height: 800 },
   });
+  const worker = await browser.waitForTarget(
+    (t) => t.type() === 'service_worker' && t.url().endsWith('/service-worker.js'),
+    { timeout: 10000 },
+  );
+  extensionId = new URL(worker.url()).host;
 }
 
 function cellLabels(page) {
@@ -129,11 +135,32 @@ function skipIfNoBrowser(t) {
   return false;
 }
 
+async function clickAutofill() {
+  const popup = await browser.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await popup.waitForFunction(
+    () => {
+      const button = document.getElementById('autofill');
+      return button && !button.disabled;
+    },
+    { timeout: 5000 },
+  );
+  await popup.click('#autofill');
+  await popup.waitForFunction(
+    () => /Filled|already solved/i.test(document.getElementById('status').textContent),
+    { timeout: 20000 },
+  );
+  await popup.close();
+}
+
 test('unpacked extension solves a fresh fixture board', async (t) => {
   if (skipIfNoBrowser(t)) return;
   const page = await browser.newPage();
   await page.goto(`${baseUrl}/fresh`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-testid="interactive-grid"]');
+  const before = await page.$eval('#status', (el) => el.textContent);
+  assert.equal(before, 'playing');
+  await clickAutofill();
   await waitForSolved(page);
   const labels = await cellLabels(page);
   const queens = queensFromLabels(labels, 4);
@@ -159,6 +186,7 @@ test('unpacked extension clears a wrong queen and leftover X marks on a partial 
   const before = await cellLabels(page);
   assert.ok(before[0].startsWith('Queen of color'), 'preset wrong queen at 0,0');
   assert.ok(before.some((label) => label.startsWith('Cross of color')), 'preset has X marks');
+  await clickAutofill();
   await waitForSolved(page);
   const labels = await cellLabels(page);
   const queens = queensFromLabels(labels, 4);
@@ -173,6 +201,7 @@ test('solver does not start a second run after the fixture re-renders as solved'
   if (skipIfNoBrowser(t)) return;
   const page = await browser.newPage();
   await page.goto(`${baseUrl}/fresh`, { waitUntil: 'domcontentloaded' });
+  await clickAutofill();
   await waitForSolved(page);
   const first = await page.$eval(
     '[data-testid="interactive-grid"]',
